@@ -38,3 +38,4 @@ list(APPEND CPP_STMS_COMMON_LINK_FLAGS
 )
 endif()
 
+add_subdirectory(external)
