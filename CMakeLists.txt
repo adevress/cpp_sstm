@@ -6,7 +6,7 @@ include(CTest)
 option(CPP_STMS_SANITIZER "Enable the sanitizer for testing and debug" OFF)
 
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
@@ -37,5 +37,22 @@ list(APPEND CPP_STMS_COMMON_LINK_FLAGS
     "-fsanitize=undefined"
 )
 endif()
+
+add_library(cpp-sstm)
+target_include_directories(cpp-sstm PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> # for consumers
+    $<INSTALL_INTERFACE:include> # for installation
+)
+
+target_sources(cpp-sstm 
+    PUBLIC
+        # Public headers
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/cpp-sstm/sstm.hpp>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/cpp-sstm/tvar.hpp>
+    PRIVATE
+        # Implementation files
+        src/transactional.cpp
+)
+
 
 add_subdirectory(external)

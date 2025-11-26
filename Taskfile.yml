@@ -1,0 +1,13 @@
+version: '3'
+
+tasks:
+  format:
+    cmds:
+      - find {include,src} -name '*.[ch]pp' -exec clang-format -i {} \;
+    silent: true
+  check-format:
+    cmds:
+      - find {include,src} -name '*.[ch]pp' -exec clang-format -fallback-style=none --Werror {} \;
+  coverage:
+    cmds:
+      - ./scripts/coverage.sh
