@@ -2,20 +2,21 @@
 /// @brief Defines the TVar class, a transactional variable for use in STM.
 #pragma once
 
+#include <cassert>
 #include <cstdint>
 #include <limits>
 #include <mutex>
 #include <shared_mutex>
 
 #include "transaction.hpp"
+#include "versionning.hpp"
 
 namespace cpp_sstm {
 
 /// @brief A constant representing an invalid TVar ID.
 constexpr std::uint64_t invalid_id = std::numeric_limits<std::uint64_t>::max();
 
-/// internal usage
-std::uint64_t get_monotonic_value();
+
 
 /// @class TVar
 /// @brief A transactional variable (TVar) that encapsulates a value of type T.
@@ -31,8 +32,7 @@ public:
   /// @brief Constructs a new TVar with an initial value.
   /// @param value The initial value to store in the TVar.
   explicit TVar(T &&value)
-      : lock_(), version_(0), id_(get_monotonic_value()),
-        value_(std::move(value)) {}
+      : versionning_(), value_(std::move(value)) {}
 
   /// @brief Deleted copy constructor. TVars cannot be copied.
   TVar(const TVar &value) = delete;
@@ -41,15 +41,7 @@ public:
   /// @param other The TVar to move from.
   /// @warning Moving a TVar during an associated transaction is undefined
   /// behaviour
-  TVar(TVar &&other) noexcept : lock_() {
-    version_ = other.version_;
-    id_ = other.id_;
-    value_ = std::move(other.value_);
-
-    // Invalidate the other TVar
-    other.version_ = 0;
-    other.id_ = invalid_id;
-  }
+  TVar(TVar &&other) noexcept = default;
 
   /// @brief Default destructor.
   ~TVar() = default;
@@ -62,24 +54,10 @@ public:
   /// @return A reference to this TVar.
   /// @warning Moving a TVar during an associated transaction is undefined
   /// behaviour
-  TVar &operator=(TVar &&other) noexcept {
-    if (this != &other) {
+  TVar &operator=(TVar &&other) noexcept = default;
 
-      // move the data
-      lock_ = {};
-      version_ = other.version_;
-      id_ = other.id_;
-      value_ = std::move(other.value_);
-
-      // Invalidate the other TVar
-      other.version_ = 0;
-      other.id_ = invalid_id;
-    }
-    return *this;
-  }
-
-  T read_unversionned() {
-    std::shared_lock lock(lock_);
+  T read_unversioned() {
+    std::shared_lock lock(versionning_.lock_);
     return value_;
   }
 
@@ -94,15 +72,8 @@ public:
   }
 
 private:
-  /// @brief Mutex to protect access to the TVar's data.
-  /// A shared_mutex is used to allow multiple concurrent readers.
-  std::shared_mutex lock_;
-
-  /// @brief The version number of the data. Incremented on each write.
-  std::uint64_t version_;
-
-  /// @brief A unique identifier for this TVar instance.
-  std::uint64_t id_;
+  /// @brief Versioning data for the TVar.
+  LockedVersionning versionning_;
 
   /// @brief The actual value stored in the TVar.
   T value_;
