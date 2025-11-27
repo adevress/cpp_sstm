@@ -7,6 +7,8 @@
 #include <mutex>
 #include <shared_mutex>
 
+#include "transaction.hpp"
+
 namespace cpp_sstm {
 
 /// @brief A constant representing an invalid TVar ID.
@@ -74,6 +76,21 @@ public:
       other.id_ = invalid_id;
     }
     return *this;
+  }
+
+  T read_unversionned() {
+    std::shared_lock lock(lock_);
+    return value_;
+  }
+
+  T read(Transaction &ts) {
+    assert(false);
+    // TODO : implement
+  }
+
+  void write(Transaction &ts, T &&value) {
+    assert(false);
+    // TODO : implement
   }
 
 private:
