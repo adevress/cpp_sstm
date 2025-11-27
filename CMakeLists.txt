@@ -38,6 +38,8 @@ list(APPEND CPP_STMS_COMMON_LINK_FLAGS
 )
 endif()
 
+list(APPEND CPP_SSTM_SRC_LIST "src/transactional.cpp")
+
 add_library(cpp-sstm)
 target_include_directories(cpp-sstm PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> # for consumers
@@ -49,10 +51,24 @@ target_sources(cpp-sstm
         # Public headers
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/cpp-sstm/sstm.hpp>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/cpp-sstm/tvar.hpp>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/cpp-sstm/transaction.hpp>
     PRIVATE
         # Implementation files
-        src/transactional.cpp
+        ${CPP_SSTM_SRC_LIST}
 )
+
+## test executable
+add_executable(cpp-sstm-tests ${CPP_SSTM_SRC_LIST})
+target_compile_definitions(cpp-sstm-tests
+    PRIVATE
+        CPP_SSTM_TESTS
+)
+
+target_include_directories(cpp-sstm-tests PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> 
+)
+target_link_libraries(cpp-sstm-tests PRIVATE doctest::doctest)
+add_test(NAME cpp-sstm-tests COMMAND cpp-sstm-tests)
 
 
 add_subdirectory(external)

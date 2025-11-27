@@ -1,52 +1,53 @@
 #pragma once
 
+#include <concepts>
+#include <cstdint>
 #include <expected>
 #include <variant>
-#include <cstdint>
 
-
+#include "transaction.hpp"
 #include "tvar.hpp"
 
-namespace cpp_sstm{
+namespace cpp_sstm {
 
-class Transaction{
+struct TransactionOptions {
+  std::uint32_t max_read_var = 64;
+  std::uint32_t max_write_var = 64;
 
-public:
-    Transaction() = default;
-    ~Transaction() = default;
-
-    Transaction(const Transaction &) = delete;
-    Transaction(Transaction &&) = delete;
-
-    Transaction & operator=(const Transaction &) = delete;
-    Transaction & operator=(Transaction &&) = delete;
-
+  std::uint32_t auto_retries = std::numeric_limits<std::uint32_t>::max();
 };
 
-struct RetryError{};
-struct AbortError{};
-struct TooManyValueError{};
+/// @concept TransactionCallback
+/// @brief Ensures a type is a callable that can be invoked with a Transaction
+/// lvalue reference.
+///
+/// This concept is used to constrain the callback parameter of
+/// `execute_transaction`. It checks if a given type `C` can be called with a
+/// `Transaction&` as its only argument.
+template <typename C>
+concept TransactionCallback = std::invocable<C, Transaction &>;
 
-using TransactionError = std::variant<RetryError, AbortError, TooManyValueError>;
+inline std::expected<void, TransactionError>
+execute_transaction(TransactionCallback auto &&callback,
+                    const TransactionOptions &options = TransactionOptions{}) {
 
-struct TransactionOptions{
-    std::uint32_t max_read_var = 64;
-    std::uint32_t max_write_var = 64;
+  Transaction state{};
+  // TODO: internal stack configuration
 
-    std::uint32_t auto_retries = std::numeric_limits<std::uint32_t>::max();
-};
-
-
-std::expected<void, TransactionError> execute_transaction(auto && callback, const TransactionOptions & options = TransactionOptions{}){
-    
-    Transaction state{};
-    // TODO: internal stack configuration
-
-    // TODO: Auto retry logic
+  std::uint32_t retries = 0;
+  do {
     callback(state);
 
-    return {};
-}
+    auto &err = state.error();
+    if (err.has_value()) {
+      return std::unexpected(err.value());
+    } else {
+      return {};
+    }
+    retries += 1;
+  } while (retries < options.auto_retries);
 
+  return std::unexpected(RetryError{});
+}
 
 } // namespace cpp_sstm
