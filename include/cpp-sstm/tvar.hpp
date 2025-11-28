@@ -9,14 +9,15 @@
 #include <shared_mutex>
 
 #include "transaction.hpp"
-#include "versionning.hpp"
+#include "value_container.hpp"
 
 namespace cpp_sstm {
 
 /// @brief A constant representing an invalid TVar ID.
 constexpr std::uint64_t invalid_id = std::numeric_limits<std::uint64_t>::max();
 
-
+/// internal usage
+std::uint64_t get_monotonic_value();
 
 /// @class TVar
 /// @brief A transactional variable (TVar) that encapsulates a value of type T.
@@ -76,7 +77,7 @@ private:
   LockedVersionning versionning_;
 
   /// @brief The actual value stored in the TVar.
-  T value_;
+  std::unique_ptr<ValueChain> value_;
 };
 
 } // namespace cpp_sstm
